@@ -794,6 +794,8 @@ impl OsuPerformanceInner<'_> {
         let total_hits = f64::from(total_hits);
 
         let mut multiplier = PERFORMANCE_BASE_MULTIPLIER;
+        // * Global compensation buff so recent AR changes are net-positive overall.
+        multiplier *= 1.07;
 
         if self.mods.nf() {
             multiplier *= (1.0 - 0.02 * self.effective_miss_count).max(0.9);
@@ -869,18 +871,23 @@ impl OsuPerformanceInner<'_> {
             );
         }
 
-        let ar_factor = if self.mods.rx() {
+        let ar_bonus = if self.mods.rx() {
             0.0
         } else if self.attrs.ar > 10.33 {
-            0.3 * (self.attrs.ar - 10.33)
+            0.0
+        } else if self.attrs.ar > 10.2 {
+            0.03 / 0.13 * (10.33 - self.attrs.ar)
+        } else if self.attrs.ar > 10.0 {
+            0.03 + 0.35 * (10.2 - self.attrs.ar)
+        } else if self.attrs.ar >= 9.0 {
+            0.1 + 0.1 * (10.0 - self.attrs.ar)
         } else if self.attrs.ar < 8.0 {
             0.05 * (8.0 - self.attrs.ar)
         } else {
             0.0
         };
 
-        // * Buff for longer maps with high AR.
-        aim_value *= 1.0 + ar_factor * len_bonus;
+        aim_value *= 1.0 + ar_bonus * len_bonus;
 
         if self.mods.bl() {
             aim_value *= 1.3
@@ -890,7 +897,14 @@ impl OsuPerformanceInner<'_> {
                     * (1.0 - 0.003 * self.attrs.hp * self.attrs.hp);
         } else if self.mods.hd() || self.mods.tc() {
             // * We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
-            aim_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
+            // * AR above 10.33 should not get any AR bonus.
+            let ar_bonus = if self.attrs.ar > 10.33 {
+                1.0
+            } else {
+                1.0 + 0.04 * (12.0 - self.attrs.ar)
+            };
+
+            aim_value *= ar_bonus;
         }
 
         // * We assume 15% of sliders in a map are difficult since there's no way to tell from the performance calculator.
@@ -950,16 +964,21 @@ impl OsuPerformanceInner<'_> {
             );
         }
 
-        let ar_factor = if self.mods.ap() {
+        let ar_bonus = if self.mods.ap() {
             0.0
         } else if self.attrs.ar > 10.33 {
-            0.3 * (self.attrs.ar - 10.33)
+            0.0
+        } else if self.attrs.ar > 10.2 {
+            0.03 / 0.13 * (10.33 - self.attrs.ar)
+        } else if self.attrs.ar > 10.0 {
+            0.03 + 0.35 * (10.2 - self.attrs.ar)
+        } else if self.attrs.ar >= 9.0 {
+            0.1 + 0.1 * (10.0 - self.attrs.ar)
         } else {
             0.0
         };
 
-        // * Buff for longer maps with high AR.
-        speed_value *= 1.0 + ar_factor * len_bonus;
+        speed_value *= 1.0 + ar_bonus * len_bonus;
 
         if self.mods.bl() {
             // * Increasing the speed value by object count for Blinds isn't
@@ -968,7 +987,14 @@ impl OsuPerformanceInner<'_> {
         } else if self.mods.hd() || self.mods.tc() {
             // * We want to give more reward for lower AR when it comes to aim and HD.
             // * This nerfs high AR and buffs lower AR.
-            speed_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
+            // * AR above 10.33 should not get any AR bonus.
+            let ar_bonus = if self.attrs.ar > 10.33 {
+                1.0
+            } else {
+                1.0 + 0.04 * (12.0 - self.attrs.ar)
+            };
+
+            speed_value *= ar_bonus;
         }
 
         // * Calculate accuracy assuming the worst case scenario
