@@ -177,4 +177,4 @@ So the intended usage is:
 
 - Repository: <https://github.com/osuAkatsuki/akatsuki-pp-rs>
 - Upstream base: <https://github.com/MaxOhn/rosu-pp>
-- osu!: <https://osu.ppy.sh/home>
+- Akatsuki: <https://akatsuki.gg>
